@@ -1,55 +1,51 @@
 <script setup>
 import { computed } from 'vue'
-
-// ---------------------------------------------------------------
-// PROPS: data this component receives from its parent
-// Field names match our PRODUCTS table from the ERD exactly.
-// When we connect to the Laravel API in Week 6, the JSON response
-// will have these same field names — no renaming needed.
-// ---------------------------------------------------------------
+import productcard from './ProductCard.vue'
+// --------------------------------------------------
+// PROPS
+// --------------------------------------------------
 const props = defineProps({
   product: {
     type: Object,
     required: true
-    // Expected shape (from PRODUCTS table in ERD):
-    // {
-    //   id: 1,                    ← PRODUCTS.id (PK, auto-increment)
-    //   name: 'White Bread',      ← PRODUCTS.name (VARCHAR 100)
-    //   category: 'bread',        ← PRODUCTS.category (ENUM: bread, cake, pastry, bun)
-    //   selling_price: 60,        ← PRODUCTS.selling_price (DECIMAL 10,2)
-    //   shelf_life_hours: 24,     ← PRODUCTS.shelf_life_hours (INT)
-    //   unit: 'loaf',             ← PRODUCTS.unit (VARCHAR 20)
-    //   is_active: true           ← PRODUCTS.is_active (BOOLEAN, default true)
-    // }
   }
 })
 
-// ---------------------------------------------------------------
-// EMIT: events this component sends UP to its parent
-// The parent decides what to do — this component just reports.
-// Think of it like a cashier reporting a sale to the manager.
-// ---------------------------------------------------------------
-const emit = defineEmits(['sell-product', 'view-recipe'])
+// --------------------------------------------------
+// EMITS
+// --------------------------------------------------
+const emit = defineEmits(['sell-product', 'view-recipe', 'toggle'])
 
-// ---------------------------------------------------------------
-// COMPUTED: derived values that auto-recalculate when data changes
-// These implement BUSINESS RULES from the capstone spec:
-// "Products have a shelf life in hours. Expiry is calculated from
-//  batch completion time."
-// ---------------------------------------------------------------
+// --------------------------------------------------
+// COMPUTED: Shelf life status
+// --------------------------------------------------
 const shelfLifeStatus = computed(() => {
   const hours = props.product.shelf_life_hours
-  if (hours <= 8) return { label: 'Very short shelf life', class: 'urgent', icon: '🔴' }
-  if (hours <= 12) return { label: 'Sells fast — prioritize', class: 'warning', icon: '🟡' }
-  if (hours <= 24) return { label: 'Sell today', class: 'today', icon: '🟠' }
-  return { label: 'Multi-day shelf life', class: 'safe', icon: '🟢' }
+
+  if (hours <= 8) {
+    return { label: 'Very short shelf life', class: 'urgent', icon: '🔴' }
+  }
+  if (hours <= 24) {
+    return { label: 'Sells fast — prioritize', class: 'warning', icon: '🟡' }
+  }
+  if (hours <= 48) {
+    return { label: 'Sell within 2 days', class: 'today', icon: '🟠' }
+  }
+
+  // ✅ TASK 3: LONG SHELF LIFE
+  return { label: 'Long shelf life', class: 'safe', icon: '🟢' }
 })
 
-// Format price with commas for readability: 1000 → 1,000
+// --------------------------------------------------
+// FORMAT PRICE
+// --------------------------------------------------
 const formattedPrice = computed(() => {
   return props.product.selling_price.toLocaleString()
 })
 
+// --------------------------------------------------
+// ACTIONS
+// --------------------------------------------------
 function handleSell() {
   emit('sell-product', props.product)
 }
@@ -57,43 +53,70 @@ function handleSell() {
 function handleViewRecipe() {
   emit('view-recipe', props.product.id)
 }
+
+function toggleActive() {
+  emit('toggle', props.product)
+}
 </script>
 
 <template>
-  <div class="product-card" :class="{ 'inactive': !product.is_active }">
-    <!-- Card header: product name + category badge -->
+  <div class="product-card" :class="{ inactive: !product.is_active }">
+
+    <!-- HEADER -->
     <div class="card-header">
       <h3 class="product-name">{{ product.name }}</h3>
+
       <span :class="'category-badge category-' + product.category">
         {{ product.category }}
       </span>
     </div>
 
-    <!-- Price display -->
+    <!-- PRICE -->
     <div class="price-section">
       <span class="price">KES {{ formattedPrice }}</span>
       <span class="unit">per {{ product.unit }}</span>
     </div>
 
-    <!-- Shelf life indicator — business rule visualization -->
-    <div :class="'shelf-life shelf-' + shelfLifeStatus.class">
-      <span class="shelf-icon">{{ shelfLifeStatus.icon }}</span>
-      <span>{{ shelfLifeStatus.label }} ({{ product.shelf_life_hours }}h)</span>
+    <!-- STOCK -->
+    <div class="stock-badge" :class="{ 'stock-low': product.available_stock <= 5, 'stock-ok': product.available_stock > 5 }">
+      Stock: {{ product.available_stock }} pcs
     </div>
 
-    <!-- Inactive product warning -->
+    <!-- SHELF LIFE -->
+    <div :class="'shelf-life shelf-' + shelfLifeStatus.class">
+      <span class="shelf-icon">{{ shelfLifeStatus.icon }}</span>
+      <span>
+        {{ shelfLifeStatus.label }} ({{ product.shelf_life_hours }}h)
+      </span>
+    </div>
+
+    <!-- INACTIVE WARNING -->
     <div v-if="!product.is_active" class="inactive-banner">
       ⚠ Product inactive — not available for sale
     </div>
 
-    <!-- Action buttons -->
+    <!-- ACTIONS -->
     <div class="card-actions">
-      <button class="btn-primary" @click="handleSell" :disabled="!product.is_active">
+
+      <!-- TOGGLE ACTIVE -->
+      <button class="btn-toggle" @click="toggleActive">
+        {{ product.is_active ? 'Deactivate' : 'Activate' }}
+      </button>
+
+      <!-- SELL -->
+      <button
+        class="btn-primary"
+        @click="handleSell"
+        :disabled="!product.is_active"
+      >
         Sell
       </button>
+
+      <!-- VIEW -->
       <button class="btn-secondary" @click="handleViewRecipe">
         View Recipe
       </button>
+
     </div>
   </div>
 </template>
@@ -105,7 +128,7 @@ function handleViewRecipe() {
   padding: 1.25rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-left: 4px solid #2563EB;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: 0.2s;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -117,30 +140,26 @@ function handleViewRecipe() {
 }
 
 .product-card.inactive {
-  opacity: 0.6;
+  opacity: 0.5;
   border-left-color: #9CA3AF;
 }
 
+/* HEADER */
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
 }
 
 .product-name {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #1A1A2E;
-  margin: 0;
 }
 
+/* CATEGORY */
 .category-badge {
   padding: 3px 10px;
   border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: capitalize;
-  white-space: nowrap;
 }
 
 .category-bread  { background: #FEF3C7; color: #92400E; }
@@ -148,15 +167,16 @@ function handleViewRecipe() {
 .category-pastry { background: #E0E7FF; color: #3730A3; }
 .category-bun    { background: #D1FAE5; color: #065F46; }
 
+/* PRICE */
 .price-section {
   display: flex;
-  align-items: baseline;
   gap: 0.5rem;
+  align-items: baseline;
 }
 
 .price {
   font-size: 1.4rem;
-  font-weight: 700;
+  font-weight: bold;
   color: #E8541E;
 }
 
@@ -165,45 +185,72 @@ function handleViewRecipe() {
   color: #9CA3AF;
 }
 
+/* SHELF LIFE */
 .shelf-life {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.85rem;
   padding: 6px 10px;
   border-radius: 6px;
+  font-size: 0.85rem;
 }
 
-.shelf-icon { font-size: 0.9rem; }
 .shelf-urgent  { background: #FEF2F2; color: #DC2626; }
 .shelf-warning { background: #FFFBEB; color: #D97706; }
 .shelf-today   { background: #FFF7ED; color: #C2410C; }
 .shelf-safe    { background: #F0FDF4; color: #059669; }
 
+/* INACTIVE */
 .inactive-banner {
   background: #FEF2F2;
   color: #991B1B;
-  padding: 8px 12px;
+  padding: 8px;
   border-radius: 6px;
   font-size: 0.85rem;
-  font-weight: 500;
 }
 
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #EEF2FF;
+  color: #3730A3;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.stock-low {
+  background: #FEF2F2;
+  color: #B91C1C;
+}
+
+.stock-ok {
+  background: #ECFDF5;
+  color: #166534;
+}
+
+/* ACTIONS */
 .card-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   margin-top: auto;
 }
 
-.btn-primary, .btn-secondary {
+button {
   flex: 1;
-  padding: 8px 16px;
-  border: none;
+  padding: 6px;
   border-radius: 6px;
+  border: none;
   cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: background 0.2s;
+  font-size: 0.8rem;
+}
+
+/* BUTTON STYLES */
+.btn-toggle {
+  background: #E5E7EB;
+}
+
+.btn-toggle:hover {
+  background: #D1D5DB;
 }
 
 .btn-primary {
@@ -211,13 +258,20 @@ function handleViewRecipe() {
   color: white;
 }
 
-.btn-primary:hover { background: #E8541E; }
-.btn-primary:disabled { background: #D1D5DB; cursor: not-allowed; }
+.btn-primary:hover {
+  background: #E8541E;
+}
+
+.btn-primary:disabled {
+  background: #D1D5DB;
+  cursor: not-allowed;
+}
 
 .btn-secondary {
   background: #F3F4F6;
-  color: #374151;
 }
 
-.btn-secondary:hover { background: #E5E7EB; }
+.btn-secondary:hover {
+  background: #E5E7EB;
+}
 </style>

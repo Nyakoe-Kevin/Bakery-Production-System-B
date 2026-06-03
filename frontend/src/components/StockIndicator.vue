@@ -59,7 +59,7 @@ const statusLabel = computed(() => {
 <div class="stock-indicator" :class="'stock-' + statusClass">
     <div class="stock-header">
       <div>
-        <span class="ingredient-name">{{ name }}</span> --
+        <span class="ingredient-name">{{ name }}</span>   --      
         <span class="stock-status" :class="statusClass">{{ statusLabel }}</span>
       </div>
       <span class="stock-amount">{{ current }} {{ unit }}</span>
@@ -99,11 +99,11 @@ const statusLabel = computed(() => {
 .stock-danger {
   background-color: #a91010;
 }
-.stick-warning {
+.stock-warning {
   background-color: #e0a800;
 }
 .stock-healthy {
-  background-color: #28a745;
+  background-color: #0ac435;
 }
 .stock-empty {
   background-color: #6c757d;
