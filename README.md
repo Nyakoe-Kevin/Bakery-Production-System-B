@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+# bakery-production-system-demo
+A full-stack bakery production management system built with Vue.js and Laravel
+=======
 # frontend
 
 This template should help get you started developing with Vue 3 in Vite.
@@ -36,3 +40,4 @@ npm run dev
 ```sh
 npm run build
 ```
+>>>>>>> origin/develop
