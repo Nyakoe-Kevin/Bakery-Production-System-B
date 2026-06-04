@@ -1,19 +1,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import ProductCard from '../components/ProductCard.vue'
+import { useProductStore } from '../stores/ProductStore'
+
+const productStore = useProductStore()
 
 // ------------------- DATA -------------------
-const products = ref([
-  { id: 1, name: 'White Bread', category: 'bread', selling_price: 60, shelf_life_hours: 24, available_stock: 120, unit: 'loaf', is_active: true },
-  { id: 2, name: 'Chocolate Cake', category: 'cake', selling_price: 350, shelf_life_hours: 72, available_stock: 18, unit: 'cake', is_active: true },
-  { id: 3, name: 'Mandazi', category: 'bun', selling_price: 10, shelf_life_hours: 12, available_stock: 80, unit: 'piece', is_active: true },
-  { id: 4, name: 'Brown Bread', category: 'bread', selling_price: 65, shelf_life_hours: 24, available_stock: 90, unit: 'loaf', is_active: true },
-  { id: 5, name: 'Cinnamon Roll', category: 'pastry', selling_price: 40, shelf_life_hours: 12, available_stock: 42, unit: 'piece', is_active: true },
-  { id: 6, name: 'Meat Pie', category: 'pastry', selling_price: 80, shelf_life_hours: 8, available_stock: 14, unit: 'piece', is_active: true },
-  { id: 7, name: 'Chapati', category: 'bread', selling_price: 20, shelf_life_hours: 8, available_stock: 72, unit: 'piece', is_active: true }
-])
-
-
 const searchQuery = ref('')
 const selectedCategory = ref('all')
 const showInactive = ref(false)
@@ -21,14 +13,25 @@ const showInactive = ref(false)
 const selectedProduct = ref(null)
 const quantity = ref(1)
 
+// Add product form state
+const newName = ref('')
+const newCategory = ref('')
+const newSellingPrice = ref(0)
+const newShelfLife = ref(24)
+const newUnit = ref('piece')
+const newStock = ref(0)
 
 const categories = computed(() => {
-  const cats = [...new Set(products.value.map(p => p.category))]
+  const cats = [...new Set(productStore.products.map(p => p.category))]
   return ['all', ...cats]
 })
 
+const productCategories = computed(() => {
+  return [...new Set(productStore.products.map(p => p.category))]
+})
+
 const filteredProducts = computed(() => {
-  return products.value.filter(product => {
+  return productStore.products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     const matchesCategory = selectedCategory.value === 'all' || product.category === selectedCategory.value
     const matchesActive = showInactive.value ? true : product.is_active
@@ -44,15 +47,15 @@ const total = computed(() => {
 
 // ------------------- COUNTERS -------------------
 const urgentCount = computed(() =>
-  products.value.filter(p => p.shelf_life_hours <= 12).length
+  productStore.products.filter(p => p.shelf_life_hours <= 12).length
 )
 
 const fastCount = computed(() =>
-  products.value.filter(p => p.shelf_life_hours > 12 && p.shelf_life_hours <= 48).length
+  productStore.products.filter(p => p.shelf_life_hours > 12 && p.shelf_life_hours <= 48).length
 )
 
 const longCount = computed(() =>
-  products.value.filter(p => p.shelf_life_hours > 48).length
+  productStore.products.filter(p => p.shelf_life_hours > 48).length
 )
 
 // ------------------- METHODS -------------------
@@ -66,8 +69,42 @@ const confirmSale = () => {
   selectedProduct.value = null
 }
 
-const toggleActive = (product) => {
-  product.is_active = !product.is_active
+function toggleActive(productId) {
+  productStore.toggleActive(productId)
+}
+
+function handleDelete(id) {
+  productStore.deleteProduct(id)
+}
+
+function handleSale(product) {
+  selectProduct(product)
+}
+
+function handleViewRecipe(productId) {
+  // Placeholder
+  alert('Recipe view not implemented in this demo.')
+}
+
+function addProduct() {
+  if (!newName.value) return
+  productStore.addProduct({
+    name: newName.value,
+    category: newCategory.value || 'other',
+    selling_price: Number(newSellingPrice.value),
+    shelf_life_hours: Number(newShelfLife.value),
+    unit: newUnit.value,
+    available_stock: Number(newStock.value),
+    is_active: true
+  })
+
+  // reset
+  newName.value = ''
+  newCategory.value = ''
+  newSellingPrice.value = 0
+  newShelfLife.value = 24
+  newUnit.value = 'piece'
+  newStock.value = 0
 }
 </script>
 
@@ -78,6 +115,26 @@ const toggleActive = (product) => {
     <div class="page-header">
       <h1>Product Catalog</h1>
     </div>
+
+    <!-- ADD PRODUCT FORM -->
+    <form @submit.prevent="addProduct" class="mb-4 bg-white rounded-lg p-4 shadow-sm">
+      <h2 class="font-semibold mb-2">Add Product</h2>
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
+        <input v-model="newName" placeholder="Name" class="col-span-2 p-2 border rounded" />
+        <select v-model="newCategory" class="p-2 border rounded">
+          <option disabled value="">Select category</option>
+          <option v-for="cat in productCategories" :key="cat" :value="cat">{{ cat }}</option>
+          <option value="other">Other</option>
+        </select>
+        <input v-model.number="newSellingPrice" type="number" placeholder="Price" class="p-2 border rounded" />
+        <input v-model.number="newShelfLife" type="number" placeholder="Shelf life (hrs)" class="p-2 border rounded" />
+        <input v-model="newUnit" placeholder="Unit" class="p-2 border rounded" />
+        <input v-model.number="newStock" type="number" placeholder="Stock" class="p-2 border rounded" />
+      </div>
+      <div class="mt-3">
+        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Add Product</button>
+      </div>
+    </form>
 
     <!-- FILTERS -->
     <div class="filter-bar">
@@ -103,13 +160,16 @@ const toggleActive = (product) => {
     </div>
 
     <!-- GRID -->
-    <div class="product-grid">
+    <!-- Product grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <ProductCard
         v-for="product in filteredProducts"
         :key="product.id"
-        :product="product"  
-        @sell-product="selectProduct" 
+        :product="product"
+        @sell-product="handleSale"
+        @view-recipe="handleViewRecipe"
         @toggle="toggleActive"
+        @delete-product="handleDelete"
       />
     </div>
 

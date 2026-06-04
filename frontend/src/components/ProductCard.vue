@@ -14,7 +14,7 @@ const props = defineProps({
 // --------------------------------------------------
 // EMITS
 // --------------------------------------------------
-const emit = defineEmits(['sell-product', 'view-recipe', 'toggle'])
+const emit = defineEmits(['sell-product', 'view-recipe', 'toggle', 'delete-product'])
 
 // --------------------------------------------------
 // COMPUTED: Shelf life status
@@ -55,7 +55,11 @@ function handleViewRecipe() {
 }
 
 function toggleActive() {
-  emit('toggle', props.product)
+  emit('toggle', props.product.id)
+}
+
+function handleDelete() {
+  emit('delete-product', props.product.id)
 }
 </script>
 
@@ -116,6 +120,11 @@ function toggleActive() {
       <button class="btn-secondary" @click="handleViewRecipe">
         View Recipe
       </button>
+
+        <!-- DELETE -->
+        <button class="btn-danger" @click="handleDelete">
+          Delete
+        </button>
 
     </div>
   </div>

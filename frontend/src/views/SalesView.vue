@@ -1,22 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
+import ProductCard from '../components/ProductCard.vue'
+import { useProductStore } from '../stores/ProductStore'
 
-// SAMPLE DATA: Products - this would normally come from an API call to /api/products
-
-const products = ref([
-  { id: 1, name: 'White Bread', selling_price: 50, available_stock: 120 },
-  { id: 2, name: 'Chocolate Cake', selling_price: 200, available_stock: 16 },
-  { id: 3, name: 'Croissant', selling_price: 30, available_stock: 54 },
-  { id: 4, name: 'Mandazi', selling_price: 10, available_stock: 80 },
-  { id: 5, name: 'Brown Bread', selling_price: 65, available_stock: 90 },
-  { id: 6, name: 'Cinnamon Roll', selling_price: 40, available_stock: 42 },
-  { id: 7, name: 'Meat Pie', selling_price: 80, available_stock: 14 },
-  { id: 8, name: 'Chapati', selling_price: 20, available_stock: 72 },
-  { id: 9, name: 'Blueberry Muffin', selling_price: 25, available_stock: 60 },
-  { id: 10, name: 'Sourdough Loaf', selling_price: 90, available_stock: 20 },
-  { id: 11, name: 'Banana Bread', selling_price: 45, available_stock: 30 },
-  { id: 12, name: 'Apple Pie', selling_price: 120, available_stock: 18 }
-])
+const productStore = useProductStore()
 
 // Form State for recording a new sale
 
@@ -29,15 +16,23 @@ const saleError = ref('')
 
 const filteredProducts = computed(() => {
   const query = searchTerm.value.trim().toLowerCase()
-  if (!query) return products.value
-  return products.value.filter(product =>
-    product.name.toLowerCase().includes(query)
+  if (!query) return productStore.products.filter(p => p.is_active)
+  return productStore.products.filter(product =>
+    product.is_active && product.name.toLowerCase().includes(query)
   )
 })
 
 function selectProduct(product) {
   selectedProductId.value = product.id
   searchTerm.value = product.name
+}
+
+function handleSale(product) {
+  selectProduct(product)
+}
+
+function handleViewRecipe(productId) {
+  saleError.value = 'Recipe details are only available from the product catalog at the moment.'
 }
 
 // Sales history - this would normally come from an API call to /api/sales=today or similar endpoint
@@ -76,7 +71,7 @@ const sales = ref([
 // COMPUTED: find the selected product details based on selectedProductId
 
 const selectedProduct = computed(() => {
-  return products.value.find(p => p.id === selectedProductId.value) || null
+  return productStore.products.find(p => p.id === selectedProductId.value) || null
 })
 
 // COMPUTED: calculate total price based on selected product and quantity
@@ -260,20 +255,15 @@ function recordSale() {
                  focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 mb-3"
         />
 
-        <div class="max-h-48 overflow-y-auto mb-4 rounded-lg border border-gray-200 bg-white">
-          <button
+          <!-- Product grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ProductCard
             v-for="product in filteredProducts"
             :key="product.id"
-            type="button"
-            @click="selectProduct(product)"
-            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b last:border-b-0"
-          >
-            <div class="flex justify-between items-center">
-              <span class="font-medium">{{ product.name }}</span>
-              <span class="text-xs text-gray-500">KES {{ product.selling_price }}</span>
-            </div>
-            <p class="text-xs text-gray-500">Stock: {{ product.available_stock }}</p>
-          </button>
+            :product="product"
+            @sell-product="handleSale"
+            @view-recipe="handleViewRecipe"
+          />
           <div v-if="filteredProducts.length === 0" class="px-4 py-3 text-sm text-gray-500">
             No products found.
           </div>
