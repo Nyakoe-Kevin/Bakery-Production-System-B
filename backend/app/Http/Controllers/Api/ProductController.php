@@ -40,7 +40,7 @@ class ProductController extends Controller
       // POST /api/products — create a product
     public function store(Request $request)
     {
-        info('Received request to create product: ' . json_encode($request->all()));
+        log::info('Received request to create product: ' . json_encode($request->all()));
         // Feature 3: Product::create($request->validated())
         return response()->json([
             'message' => 'Product created' . ' — ID:' .$request->input('id'),
