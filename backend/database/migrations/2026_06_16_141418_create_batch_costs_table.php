@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('batch_costs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('batch_id')->constrained('production_batches')->onDelete('cascade');
+            $table->foreignId('production_batch_id')->constrained('production_batches')->onDelete('cascade');
             $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
-            $table->decimal('quantity_used', 12, 4)->default(0);
-            $table->decimal('unit_cost', 12, 2)->default(0);
-            $table->decimal('total_cost', 14, 2)->default(0);
+            $table->decimal('quantity_used', 15, 4)->default(0);
+            $table->decimal('unit_cost', 20, 2)->default(0);
+            $table->decimal('total_cost', 50, 2)->default(0);
             $table->timestamps();
         });
     }

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
+            $table->foreignId('ingredient_id')->constrained()->onDelete('cascade');
             $table->enum('type', ['purchase', 'production', 'adjustment', 'waste']);
             $table->decimal('quantity', 12, 4)->default(0);
             $table->decimal('balance_after', 12, 4)->default(0);
