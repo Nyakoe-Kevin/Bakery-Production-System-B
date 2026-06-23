@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\IngredientController;
+use App\Http\Controllers\Api\ProductionBatchController;
+use App\Http\Controllers\Api\SaleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -54,4 +57,14 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+});
+
+// Public-ish read endpoints for frontend (require auth)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/ingredients', [IngredientController::class, 'index']);
+    Route::get('/production-batches', [ProductionBatchController::class, 'index']);
+    Route::post('/production-batches/{id}/advance', [ProductionBatchController::class, 'advance']);
+
+    Route::get('/sales', [SaleController::class, 'index']);
+    Route::post('/sales', [SaleController::class, 'store']);
 });
