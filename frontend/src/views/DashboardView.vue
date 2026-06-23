@@ -1,113 +1,21 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import api from '../api'
 import StockIndicator from '../components/StockIndicator.vue'
 import BatchCard from '../components/BatchCard.vue'
+import { useIngredientStore } from '../stores/IngredientsStore'
+import { useBatchStore } from '../stores/BatchStore'
 
-// DATA
-const ingredients = ref([
-  { id: 1, name: 'Wheat Flour', current_stock: 50, reorder_level: 20, unit: 'kg', cost_per_unit: 100 },
-  { id: 2, name: 'Cinnamon', current_stock: 0.4, reorder_level: 0.5, unit: 'kg', cost_per_unit: 1200 },
-  { id: 3, name: 'Eggs', current_stock: 120, reorder_level: 50, unit: 'pcs', cost_per_unit: 15 },
-  { id: 4, name: 'Yeast', current_stock: 2, reorder_level: 1, unit: 'kg', cost_per_unit: 800 },
-  { id: 5, name: 'Sugar', current_stock: 30, reorder_level: 10, unit: 'kg', cost_per_unit: 150 },
-  { id: 6, name: 'Cocoa Powder', current_stock: 5, reorder_level: 3, unit: 'kg', cost_per_unit: 600 },
-  { id: 7, name: 'Butter', current_stock: 8, reorder_level: 5, unit: 'kg', cost_per_unit: 500 },
-  { id: 8, name: 'Milk', current_stock: 20, reorder_level: 10, unit: 'ltr', cost_per_unit: 70 },
-])
-//sample data: production batches
+const ingredientStore = useIngredientStore()
+const batchStore = useBatchStore()
 
-//GET /api/production-batches
+onMounted(async () => {
+  await ingredientStore.fetchIngredients()
+  await batchStore.fetchBatches()
+})
 
-const batches = ref([
-  {
-    id: 1,
-    product_name: 'White Bread',
-    product_id: 1,
-    planned_quantity: 50,
-    actual_quantity: 47,
-    wastage_quantity: 3,
-    status: 'done',
-    started_at: '2026-05-20 06:30',
-    completed_at: '2026-05-20 08:15'
-  },
-  {
-    id: 2,
-    product_name: 'Chocolate Cake',
-    product_id: 2,
-    planned_quantity: 30,
-    actual_quantity: 0,
-    wastage_quantity: 30,
-    status: 'failed',
-    started_at: '2026-05-21 09:00',
-    completed_at: '2026-05-21 09:30'
-  },
-  {
-    id: 3,
-    product_name: 'Cinnamon Roll',
-    product_id: 3,
-    planned_quantity: 20,
-    actual_quantity: null,
-    wastage_quantity: null,
-    status: 'planned',
-    started_at: null,
-    completed_at: null
-  },
-  {
-    id: 4,
-    product_name: 'Meat Pie',
-    product_id: 4,
-    planned_quantity: 40,
-    actual_quantity: 0,
-    wastage_quantity: 40,
-    status: 'failed',
-    started_at: '2026-05-21 10:00',
-    completed_at: '2026-05-21 10:30'
-  },
-  {
-    id: 5,
-    product_name: 'Blueberry Muffin',
-    product_id: 5,
-    planned_quantity: 60,
-    actual_quantity: null,
-    wastage_quantity: null,
-    status: 'cooling',
-    started_at: '2026-05-21 07:00',
-    completed_at: null
-  },
-  {
-    id: 6,
-    product_name: 'Sourdough Loaf',
-    product_id: 6,
-    planned_quantity: 25,
-    actual_quantity: 22,
-    wastage_quantity: 3,
-    status: 'done',
-    started_at: '2026-05-20 05:00',
-    completed_at: '2026-05-20 07:30'
-  },
-  {
-    id: 7,
-    product_name: 'Banana Bread',
-    product_id: 7,
-    planned_quantity: 15,
-    actual_quantity: 12,
-    wastage_quantity: 3,
-    status: 'done',
-    started_at: '2026-05-20 11:00',
-    completed_at: '2026-05-20 12:45'
-  },
-  {
-    id: 8,
-    product_name: 'Apple Pie',
-    product_id: 8,
-    planned_quantity: 35,
-    actual_quantity: null,
-    wastage_quantity: null,
-    status: 'planned',
-    started_at: null,
-    completed_at: null
-  }
-])
+const ingredients = ingredientStore.ingredients
+const batches = batchStore.batches
 //sample data: production batches
 
 // FILTERS
@@ -198,22 +106,30 @@ function advanceBatch(payload) {
   const batch = batches.value.find(b => b.id === batchId)
   if (!batch) return
 
-  batch.status = nextStatus
-  if (nextStatus === 'mixing' && !batch.started_at) {
-    batch.started_at = new Date().toISOString()
-  }
-
-  if (nextStatus === 'done') {
-    if (batch.actual_quantity == null) {
-      batch.actual_quantity = batch.planned_quantity
-      batch.wastage_quantity = 0
-    }
-    batch.completed_at = new Date().toISOString()
-  }
-
-  if (nextStatus === 'failed') {
-    batch.completed_at = new Date().toISOString()
-  }
+  // Call backend to persist status change and let server deduct stock when completed
+  api.post(`/production-batches/${batchId}/advance`, { status: nextStatus })
+    .then(res => {
+      // update local batch from server response
+      const updated = res.data.batch || res.data
+      Object.assign(batch, updated)
+    })
+    .catch(() => {
+      // fallback to optimistic local update if API fails
+      batch.status = nextStatus
+      if (nextStatus === 'mixing' && !batch.started_at) {
+        batch.started_at = new Date().toISOString()
+      }
+      if (nextStatus === 'done') {
+        if (batch.actual_quantity == null) {
+          batch.actual_quantity = batch.planned_quantity
+          batch.wastage_quantity = 0
+        }
+        batch.completed_at = new Date().toISOString()
+      }
+      if (nextStatus === 'failed') {
+        batch.completed_at = new Date().toISOString()
+      }
+    })
 }
 
 const markFailed = (batch) => {

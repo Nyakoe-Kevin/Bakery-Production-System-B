@@ -1,6 +1,9 @@
 <script setup>
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { useAuthStore } from './stores/auth'
 
+const auth = useAuthStore()
+const role = computed(() => auth.user?.role || null)
 
 </script>
 
@@ -9,10 +12,10 @@ import { ref } from 'vue'
   <nav class="navbar">
         <div class="brand"> Bakery Production System</div>
         <div class="nav-links">
-          <router-link to="/">Dashboard</router-link>
-          <router-link to="/products">Products</router-link>
-          <router-link to="/sales">Sales</router-link>
-          <router-link to="/login">Login</router-link>
+          <router-link v-if="role === 'admin' || role === 'baker'" to="/">Dashboard</router-link>
+          <router-link v-if="role === 'admin'" to="/products">Products</router-link>
+          <router-link v-if="role === 'admin' || role === 'cashier'" to="/sales">Sales</router-link>
+          <router-link v-if="!role" to="/login">Login</router-link>
         </div>
   </nav>
   <!-- Page content renders here -->

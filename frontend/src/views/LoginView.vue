@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const email = ref('')
 const password = ref('')
@@ -14,22 +15,14 @@ const errorMessage = ref('')
 async function handleLogin() {
   errorMessage.value = ''
   isLoading.value = true
-
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800))
-
-  // In Week 6:
-  // try {
-  //   const response = await axios.post('/api/login', { email, password })
-  //   authStore.setUser(response.data.user, response.data.token)
-  //   router.push('/')
-  // } catch (err) {
-  //   errorMessage.value = 'Invalid email or password'
-  // }
-
-  console.log(`Login: ${email.value} as ${role.value}`)
-  isLoading.value = false
-  router.push('/')
+  try {
+    const res = await auth.login({ email: email.value, password: password.value })
+    isLoading.value = false
+    router.push('/')
+  } catch (err) {
+    isLoading.value = false
+    errorMessage.value = err.response?.data?.message || 'Invalid email or password'
+  }
 }
 
 

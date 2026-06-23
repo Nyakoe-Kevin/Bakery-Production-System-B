@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import api from '../api'
 
 import { useIngredientStore } from './IngredientsStore'
 
@@ -58,6 +59,15 @@ export const useBatchStore = defineStore('batch', () => {
         }
 
         return batch
+    }
+
+    async function fetchBatches() {
+        try {
+            const res = await api.get('/production-batches')
+            batches.value = res.data
+        } catch (e) {
+            // ignore for now
+        }
     }
 
     return {

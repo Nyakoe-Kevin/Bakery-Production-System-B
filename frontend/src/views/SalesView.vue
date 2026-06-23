@@ -1,9 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ProductCard from '../components/ProductCard.vue'
 import { useProductStore } from '../stores/ProductStore'
+import { useSalesStore } from '../stores/SalesStore'
 
 const productStore = useProductStore()
+const salesStore = useSalesStore()
+
+onMounted(() => {
+  if (productStore.fetchProducts) productStore.fetchProducts()
+})
 
 // Form State for recording a new sale
 
@@ -35,39 +41,8 @@ function handleViewRecipe(productId) {
   saleError.value = 'Recipe details are only available from the product catalog at the moment.'
 }
 
-// Sales history - this would normally come from an API call to /api/sales=today or similar endpoint
-const sales = ref([
-  {
-    id: 1,
-    product_id: 1,
-    product_name: 'White Bread',
-    quantity: 10,
-    total_amount: 500,
-    payment_method: 'cash',
-    mpesa_ref: null,
-    timestamp: '2026-06-02T09:10:00'
-  },
-  {
-    id: 2,
-    product_id: 2,
-    product_name: 'Chocolate Cake',
-    quantity: 1,
-    total_amount: 200,
-    payment_method: 'mpesa',
-    mpesa_ref: 'SHK7X9M2LP',
-    timestamp: '2026-06-02T11:25:00'
-  },
-  {
-    id: 3,
-    product_id: 3,
-    product_name: 'Croissant',
-    quantity: 5,
-    total_amount: 150,
-    payment_method: 'cash',
-    mpesa_ref: null,
-    timestamp: '2026-06-03T08:15:00'
-  }
-])
+// Sales are stored in SalesStore (persisted via API when possible)
+const sales = salesStore.sales
 // COMPUTED: find the selected product details based on selectedProductId
 
 const selectedProduct = computed(() => {
@@ -192,17 +167,17 @@ function recordSale() {
   }
 
   const newSale = {
-    id: sales.value.length + 1,
     product_id: selectedProduct.value.id,
     product_name: selectedProduct.value.name,
     quantity: quantity.value,
     total_amount: totalAmount.value,
     payment_method: paymentMethod.value,
     mpesa_ref: paymentMethod.value === 'mpesa' ? mpesaRef.value.toUpperCase().replace(/\s+/g, '') : null,
+    unit_price: selectedProduct.value.selling_price,
     timestamp: new Date().toISOString()
   }
 
-  sales.value.push(newSale)
+  salesStore.recordSale(newSale)
   selectedProduct.value.available_stock -= quantity.value
 
   selectedProductId.value = null

@@ -1,9 +1,13 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ProductCard from '../components/ProductCard.vue'
 import { useProductStore } from '../stores/ProductStore'
 
 const productStore = useProductStore()
+
+onMounted(() => {
+  if (productStore.fetchProducts) productStore.fetchProducts()
+})
 
 // ------------------- DATA -------------------
 const searchQuery = ref('')

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import api from '../api'
 
 //export the car
 export const useIngredientStore = defineStore('ingredient', () => {
@@ -49,6 +50,19 @@ export const useIngredientStore = defineStore('ingredient', () => {
         }
     }
 
+    async function fetchIngredients() {
+        isLoading.value = true
+        error.value = null
+        try {
+            const res = await api.get('/ingredients')
+            ingredients.value = res.data
+        } catch (e) {
+            error.value = 'Failed to load ingredients'
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     function addStock(ingredientId, qty) {
         const ingredient = ingredients.value.find(i => i.id === ingredientId)
         if (ingredient) {
@@ -56,5 +70,5 @@ export const useIngredientStore = defineStore('ingredient', () => {
         }
     }
 
-    return { ingredients, isLoading, error, lowStockItems, lowStockCount, totalStockValue, deductStock, addStock }
+    return { ingredients, isLoading, error, lowStockItems, lowStockCount, totalStockValue, deductStock, addStock, fetchIngredients }
 })

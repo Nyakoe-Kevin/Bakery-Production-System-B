@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import api from '../api'
 
 export const useSalesStore = defineStore('sales', () => {
   // State
@@ -152,6 +153,17 @@ export const useSalesStore = defineStore('sales', () => {
 
   // Actions
   function recordSale(saleData) {
+    // optimistic local update, try persist to server
+    try {
+      api.post('/sales', {
+        product_id: saleData.product_id,
+        quantity: saleData.quantity,
+        unit_price: saleData.unit_price ?? (saleData.total_amount / saleData.quantity)
+      }).catch(() => {})
+    } catch (e) {
+      // ignore
+    }
+
     const newSale = {
       id: sales.value.length > 0 ? Math.max(...sales.value.map(s => s.id)) + 1 : 1,
       product_id: saleData.product_id,

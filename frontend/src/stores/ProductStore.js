@@ -15,6 +15,7 @@
 
 import {defineStore} from 'pinia'
 import {ref, computed} from 'vue'
+import api from '../api'
 
 export const useProductStore = defineStore('product', () => {
 
@@ -73,17 +74,18 @@ export const useProductStore = defineStore('product', () => {
 
     // In Week 6, this replaces the hardcoded data:
     // async function fetchProducts() {
-    //   isLoading.value = true
-    //   error.value = null
-    //   try {
-    //     const response = await axios.get('/api/products')
-    //     products.value = response.data
-    //   } catch (err) {
-    //     error.value = 'Failed to load products'
-    //   } finally {
-    //     isLoading.value = false
-    //   }
-    // }
+        async function fetchProducts() {
+            isLoading.value = true
+            error.value = null
+            try {
+                const response = await api.get('/products')
+                products.value = response.data
+            } catch (err) {
+                error.value = 'Failed to load products'
+            } finally {
+                isLoading.value = false
+            }
+        }
 
     return {
         // State
@@ -91,6 +93,6 @@ export const useProductStore = defineStore('product', () => {
         // Getters
         productCount, activeProducts, categories, totalCatalogValue,
         // Actions
-        addProduct, updateProduct, toggleActive,deleteProduct
+        addProduct, updateProduct, toggleActive,deleteProduct, fetchProducts
     }
 })
